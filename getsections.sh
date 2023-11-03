@@ -3,6 +3,14 @@
 input_file="in1"
 output_prefix="out"
 
+# Function to trim leading and trailing whitespace and line endings
+trim() {
+  local trimmed="$1"
+  trimmed=${trimmed%%[[:space:]]*}   # Trim leading whitespace
+  trimmed=${trimmed##*[[:space:]]}   # Trim trailing whitespace
+  echo "$trimmed"
+}
+
 # Initialize variables
 section_number=0
 inside_section=0
@@ -10,11 +18,14 @@ section=""
 
 # Read the input file line by line
 while IFS= read -r line; do
-  if [[ $line == "-----BEGIN -----" ]]; then
+  # Trim leading/trailing whitespace and line endings
+  trimmed_line=$(trim "$line")
+
+  if [[ "$trimmed_line" == "-----BEGIN -----" ]]; then
     # Found the start marker
     inside_section=1
     section="-----BEGIN -----\n"
-  elif [[ $line == "-----END-----" && $inside_section -eq 1 ]]; then
+  elif [[ "$trimmed_line" == "-----END-----" && $inside_section -eq 1 ]]; then
     # Found the end marker and we were inside a section
     inside_section=0
     section+="-----END-----\n"
