@@ -1,0 +1,130 @@
+package com.example.snakegame
+
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.MotionEvent
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.view.View
+import java.util.*
+import kotlin.math.floor
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var gameView: GameView
+    private var handler: Handler = Handler(Looper.getMainLooper())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        gameView = GameView(this)
+        setContentView(gameView)
+
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                gameView.invalidate()
+                handler.postDelayed(this, 100)
+            }
+        }, 100)
+    }
+}
+
+class GameView(context: MainActivity) : View(context) {
+
+    private var snake: LinkedList<Pair<Int, Int>> = LinkedList()
+    private var food: Pair<Int, Int> = generateFood()
+    private var direction: Pair<Int, Int> = Pair(1, 0)
+    private var widthCount: Int = 20
+    private var heightCount: Int = 20
+
+    init {
+        snake.add(Pair(5, 5))
+        snake.add(Pair(5, 6))
+        snake.add(Pair(5, 7))
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        canvas.drawColor(Color.BLACK)
+
+        val paint = Paint()
+        paint.color = Color.GREEN
+
+        for (part in snake) {
+            canvas.drawRect(
+                part.first * width / widthCount.toFloat(),
+                part.second * height / heightCount.toFloat(),
+                (part.first + 1) * width / widthCount.toFloat(),
+                (part.second + 1) * height / heightCount.toFloat(),
+                paint
+            )
+        }
+
+        paint.color = Color.RED
+        canvas.drawRect(
+            food.first * width / widthCount.toFloat(),
+            food.second * height / heightCount.toFloat(),
+            (food.first + 1) * width / widthCount.toFloat(),
+            (food.second + 1) * height / heightCount.toFloat(),
+            paint
+        )
+
+        moveSnake()
+        checkCollision()
+    }
+
+    private fun moveSnake() {
+        val head = snake.first
+        val newHead = Pair(head.first + direction.first, head.second + direction.second)
+
+        snake.addFirst(newHead)
+        if (newHead == food) {
+            food = generateFood()
+        } else {
+            snake.removeLast()
+        }
+    }
+
+    private fun checkCollision() {
+        val head = snake.first
+        if (head.first < 0 || head.first >= widthCount || head.second < 0 || head.second >= heightCount || snake.count { it == head } > 1) {
+            snake.clear()
+            snake.add(Pair(5, 5))
+            snake.add(Pair(5, 6))
+            snake.add(Pair(5, 7))
+            direction = Pair(1, 0)
+        }
+    }
+
+    private fun generateFood(): Pair<Int, Int> {
+        val random = Random()
+        var foodPosition: Pair<Int, Int>
+        do {
+            foodPosition = Pair(random.nextInt(widthCount), random.nextInt(heightCount))
+        } while (snake.contains(foodPosition))
+        return foodPosition
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val x = event.x
+            val y = event.y
+
+            val head = snake.first
+            val newDirection = when {
+                x > head.first * width / widthCount.toFloat() && direction != Pair(-1, 0) -> Pair(1, 0)
+                x < head.first * width / widthCount.toFloat() && direction != Pair(1, 0) -> Pair(-1, 0)
+                y > head.second * height / heightCount.toFloat() && direction != Pair(0, -1) -> Pair(0, 1)
+                y < head.second * height / heightCount.toFloat() && direction != Pair(0, 1) -> Pair(0, -1)
+                else -> direction
+            }
+
+            direction = newDirection
+        }
+        return true
+    }
+}
